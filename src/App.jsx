@@ -1,12 +1,13 @@
-import React from 'react'
+import React from 'react';
+import MapView from './components/MapView';
 
 function App() {
   return (
-    <div style={{ textAlign: 'center', marginTop: '50px' }}>
-      <h1>Welcome to PinTheTail 🐾</h1>
-      <p>Lost Pet Finder - v0.1 Scaffold</p>
+    <div>
+      <h1>Pin The Tail</h1>
+      <MapView />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
