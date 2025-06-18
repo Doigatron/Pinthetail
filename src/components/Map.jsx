@@ -1,3 +1,5 @@
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import React, { useState } from 'react';
 
 const samplePins = [
