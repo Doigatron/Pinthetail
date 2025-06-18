@@ -1,55 +1,136 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useState } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMapEvents,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 
-// Sample pins with different types
-const samplePins = [
-  { id: 1, lat: 43.65107, lng: -79.347015, type: 'cat', description: 'Orange tabby seen near park' },
-  { id: 2, lat: 43.6532, lng: -79.3832, type: 'dog', description: 'Small black dog, no collar' },
-  { id: 3, lat: 43.656, lng: -79.35, type: 'other', description: 'Parrot sighted in tree' },
-];
+// Fix marker icon paths
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
-export default function Map() {
-  const [filter, setFilter] = useState('all');
+const AddMarkerOnClick = ({ setNewPin }) => {
+  useMapEvents({
+    click(e) {
+      setNewPin({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+        type: "cat",
+        description: "",
+      });
+    },
+  });
+  return null;
+};
 
-  const filteredPins = filter === 'all' ? samplePins : samplePins.filter(pin => pin.type === filter);
+const Map = ({ filter }) => {
+  const [pins, setPins] = useState([
+    {
+      lat: 43.65,
+      lng: -79.38,
+      type: "cat",
+      description: "Grey cat near Queen St.",
+    },
+    {
+      lat: 43.66,
+      lng: -79.4,
+      type: "dog",
+      description: "Lost golden retriever",
+    },
+    {
+      lat: 43.67,
+      lng: -79.36,
+      type: "other",
+      description: "Parrot spotted in tree",
+    },
+  ]);
+
+  const [newPin, setNewPin] = useState(null);
+
+  const handleSave = () => {
+    if (!newPin.description.trim()) return;
+    setPins((prev) => [...prev, newPin]);
+    setNewPin(null);
+  };
 
   return (
-    <div className="p-4">
-      <div className="mb-4">
-        <label htmlFor="filter" className="text-white font-semibold mr-2">Filter by Animal:</label>
-        <select
-          id="filter"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-          className="p-2 rounded bg-white text-black"
-        >
-          <option value="all">All</option>
-          <option value="cat">Cat</option>
-          <option value="dog">Dog</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
+    <div className="h-[600px] w-full z-0">
+      <MapContainer
+        center={[43.65, -79.38]}
+        zoom={13}
+        scrollWheelZoom={true}
+        className="h-full w-full z-0"
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="© OpenStreetMap contributors"
+        />
 
-      {/* Map container with height */}
-      <div style={{ height: '500px', width: '100%' }}>
-        <MapContainer
-          center={[43.65107, -79.347015]}
-          zoom={13}
-          scrollWheelZoom={true}
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {filteredPins.map(pin => (
-            <Marker key={pin.id} position={[pin.lat, pin.lng]}>
-              <Popup>{pin.description}</Popup>
+        <AddMarkerOnClick setNewPin={setNewPin} />
+
+        {/* Existing Pins */}
+        {pins
+          .filter((pin) => filter === "all" || pin.type === filter)
+          .map((pin, index) => (
+            <Marker key={index} position={[pin.lat, pin.lng]}>
+              <Popup>
+                <strong>{pin.type}</strong>: {pin.description}
+              </Popup>
             </Marker>
           ))}
-        </MapContainer>
-      </div>
+
+        {/* New Pin Form */}
+        {newPin && (
+          <Marker position={[newPin.lat, newPin.lng]}>
+            <Popup
+              closeOnClick={false}
+              onClose={() => setNewPin(null)}
+              autoClose={false}
+            >
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm font-medium">Animal Type:</label>
+                <select
+                  value={newPin.type}
+                  onChange={(e) =>
+                    setNewPin({ ...newPin, type: e.target.value })
+                  }
+                  className="border px-2 py-1 rounded"
+                >
+                  <option value="cat">Cat</option>
+                  <option value="dog">Dog</option>
+                  <option value="other">Other</option>
+                </select>
+
+                <label className="text-sm font-medium">Description:</label>
+                <textarea
+                  value={newPin.description}
+                  onChange={(e) =>
+                    setNewPin({ ...newPin, description: e.target.value })
+                  }
+                  className="border px-2 py-1 rounded"
+                  rows={3}
+                />
+
+                <button
+                  onClick={handleSave}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                >
+                  Save
+                </button>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+      </MapContainer>
     </div>
   );
-}
+};
+
+export default Map;
