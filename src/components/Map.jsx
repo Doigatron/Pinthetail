@@ -1,128 +1,68 @@
-import { useState, useEffect } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMapEvents,
-} from "react-leaflet";
+import React from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix marker icon paths
+// Fix marker icons for Leaflet in Vite
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Fix default icon paths
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
 });
 
-const AddMarkerOnClick = ({ setNewPin }) => {
-  useMapEvents({
-    click(e) {
-      setNewPin({
-        lat: e.latlng.lat,
-        lng: e.latlng.lng,
-        type: "cat",
-        description: "",
-      });
-    },
-  });
-  return null;
-};
+const samplePins = [
+  {
+    id: 1,
+    type: "cat",
+    lat: 43.6532,
+    lng: -79.3832,
+    message: "Grey tabby seen near here",
+  },
+  {
+    id: 2,
+    type: "dog",
+    lat: 43.6580,
+    lng: -79.3805,
+    message: "Black dog wandering around",
+  },
+  {
+    id: 3,
+    type: "other",
+    lat: 43.6510,
+    lng: -79.3870,
+    message: "Parrot flew into a tree",
+  },
+];
 
-const Map = ({ filter }) => {
-  const [pins, setPins] = useState([]);
-  const [newPin, setNewPin] = useState(null);
-
-  // Load pins from localStorage on first render
-  useEffect(() => {
-    const savedPins = localStorage.getItem("pinthetail-pins");
-    if (savedPins) {
-      setPins(JSON.parse(savedPins));
-    }
-  }, []);
-
-  // Save pins to localStorage every time they change
-  useEffect(() => {
-    localStorage.setItem("pinthetail-pins", JSON.stringify(pins));
-  }, [pins]);
-
-  const handleSave = () => {
-    if (!newPin.description.trim()) return;
-    setPins((prev) => [...prev, newPin]);
-    setNewPin(null);
-  };
-
+const Map = () => {
   return (
-    <div className="h-[600px] w-full z-0">
+    <div style={{ height: "100vh", width: "100%" }}>
       <MapContainer
-        center={[43.65, -79.38]}
+        center={[43.6532, -79.3832]} // Toronto center
         zoom={13}
         scrollWheelZoom={true}
-        className="h-full w-full z-0"
+        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
+          attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="© OpenStreetMap contributors"
         />
-
-        <AddMarkerOnClick setNewPin={setNewPin} />
-
-        {pins
-          .filter((pin) => filter === "all" || pin.type === filter)
-          .map((pin, index) => (
-            <Marker key={index} position={[pin.lat, pin.lng]}>
-              <Popup>
-                <strong>{pin.type}</strong>: {pin.description}
-              </Popup>
-            </Marker>
-          ))}
-
-        {newPin && (
-          <Marker position={[newPin.lat, newPin.lng]}>
-            <Popup
-              closeOnClick={false}
-              onClose={() => setNewPin(null)}
-              autoClose={false}
-            >
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm font-medium">Animal Type:</label>
-                <select
-                  value={newPin.type}
-                  onChange={(e) =>
-                    setNewPin({ ...newPin, type: e.target.value })
-                  }
-                  className="border px-2 py-1 rounded"
-                >
-                  <option value="cat">Cat</option>
-                  <option value="dog">Dog</option>
-                  <option value="other">Other</option>
-                </select>
-
-                <label className="text-sm font-medium">Description:</label>
-                <textarea
-                  value={newPin.description}
-                  onChange={(e) =>
-                    setNewPin({ ...newPin, description: e.target.value })
-                  }
-                  className="border px-2 py-1 rounded"
-                  rows={3}
-                />
-
-                <button
-                  onClick={handleSave}
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                >
-                  Save
-                </button>
-              </div>
+        {samplePins.map((pin) => (
+          <Marker key={pin.id} position={[pin.lat, pin.lng]}>
+            <Popup>
+              <strong>{pin.type.toUpperCase()}</strong>: {pin.message}
             </Popup>
           </Marker>
-        )}
+        ))}
       </MapContainer>
     </div>
   );
 };
 
 export default Map;
-ort default Map;
