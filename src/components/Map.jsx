@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -31,28 +31,21 @@ const AddMarkerOnClick = ({ setNewPin }) => {
 };
 
 const Map = ({ filter }) => {
-  const [pins, setPins] = useState([
-    {
-      lat: 43.65,
-      lng: -79.38,
-      type: "cat",
-      description: "Grey cat near Queen St.",
-    },
-    {
-      lat: 43.66,
-      lng: -79.4,
-      type: "dog",
-      description: "Lost golden retriever",
-    },
-    {
-      lat: 43.67,
-      lng: -79.36,
-      type: "other",
-      description: "Parrot spotted in tree",
-    },
-  ]);
-
+  const [pins, setPins] = useState([]);
   const [newPin, setNewPin] = useState(null);
+
+  // Load pins from localStorage on first render
+  useEffect(() => {
+    const savedPins = localStorage.getItem("pinthetail-pins");
+    if (savedPins) {
+      setPins(JSON.parse(savedPins));
+    }
+  }, []);
+
+  // Save pins to localStorage every time they change
+  useEffect(() => {
+    localStorage.setItem("pinthetail-pins", JSON.stringify(pins));
+  }, [pins]);
 
   const handleSave = () => {
     if (!newPin.description.trim()) return;
@@ -75,7 +68,6 @@ const Map = ({ filter }) => {
 
         <AddMarkerOnClick setNewPin={setNewPin} />
 
-        {/* Existing Pins */}
         {pins
           .filter((pin) => filter === "all" || pin.type === filter)
           .map((pin, index) => (
@@ -86,7 +78,6 @@ const Map = ({ filter }) => {
             </Marker>
           ))}
 
-        {/* New Pin Form */}
         {newPin && (
           <Marker position={[newPin.lat, newPin.lng]}>
             <Popup
@@ -134,3 +125,4 @@ const Map = ({ filter }) => {
 };
 
 export default Map;
+ort default Map;
