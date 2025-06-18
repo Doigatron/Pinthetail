@@ -1,11 +1,11 @@
 import React from 'react';
-import MapView from './components/MapView';
+import Map from './components/Map';
 
 function App() {
   return (
-    <div>
-      <h1>Pin The Tail</h1>
-      <MapView />
+    <div style={{ padding: '2rem' }}>
+      <h1>Pinthetail Map</h1>
+      <Map />
     </div>
   );
 }
