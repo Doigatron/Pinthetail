@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -9,9 +9,23 @@ const samplePins = [
 ];
 
 const Map = () => {
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedColor, setSelectedColor] = useState('');
-  const [locationQuery, setLocationQuery] = useState('');
+  const getInitialFilter = (key) => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(key) || '';
+  };
+
+  const [selectedType, setSelectedType] = useState(getInitialFilter('type'));
+  const [selectedColor, setSelectedColor] = useState(getInitialFilter('color'));
+  const [locationQuery, setLocationQuery] = useState(getInitialFilter('location'));
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedType) params.set('type', selectedType);
+    if (selectedColor) params.set('color', selectedColor);
+    if (locationQuery) params.set('location', locationQuery);
+    window.history.replaceState(null, '', `?${params.toString()}`);
+  }, [selectedType, selectedColor, locationQuery]);
 
   const filteredPins = samplePins.filter(pin => {
     const matchType = selectedType ? pin.type === selectedType : true;
@@ -21,6 +35,12 @@ const Map = () => {
       : true;
     return matchType && matchColor && matchLocation;
   });
+
+  const clearFilters = () => {
+    setSelectedType('');
+    setSelectedColor('');
+    setLocationQuery('');
+  };
 
   return (
     <div style={{ height: '100vh', width: '100%' }}>
@@ -49,6 +69,8 @@ const Map = () => {
           onChange={(e) => setLocationQuery(e.target.value)}
           placeholder="Enter city or area"
         />
+
+        <button onClick={clearFilters} style={{ marginLeft: '1rem' }}>Clear Filters</button>
       </div>
 
       <MapContainer center={[43.7, -79.4]} zoom={12} style={{ height: '90%', width: '100%' }}>
@@ -72,4 +94,3 @@ const Map = () => {
 };
 
 export default Map;
-
