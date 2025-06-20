@@ -1,118 +1,75 @@
-import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import React, { useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
-// Fix missing marker icons in some setups
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-});
+const samplePins = [
+  { id: 1, lat: 43.7, lng: -79.4, type: 'Cat', color: 'Black', location: 'Toronto', description: 'Small black cat near Queen St.' },
+  { id: 2, lat: 43.65, lng: -79.38, type: 'Dog', color: 'Brown', location: 'Toronto', description: 'Brown dog near the park.' },
+  { id: 3, lat: 43.68, lng: -79.42, type: 'Other', color: 'White', location: 'Toronto', description: 'White bunny spotted downtown.' },
+];
 
-function ClickHandler({ onMapClick }) {
-  useMapEvents({
-    click(e) {
-      onMapClick(e.latlng);
-    },
+const Map = () => {
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
+
+  const filteredPins = samplePins.filter(pin => {
+    const matchType = selectedType ? pin.type === selectedType : true;
+    const matchColor = selectedColor ? pin.color === selectedColor : true;
+    const matchLocation = locationQuery
+      ? pin.location.toLowerCase().includes(locationQuery.toLowerCase())
+      : true;
+    return matchType && matchColor && matchLocation;
   });
-  return null;
-}
-
-export default function Map() {
-  const [pins, setPins] = useState([
-    { lat: 43.65107, lng: -79.347015, type: "cat", description: "Grey cat near park" },
-    { lat: 43.6532, lng: -79.3832, type: "dog", description: "Small white dog running on street" },
-  ]);
-
-  const [newPin, setNewPin] = useState(null);
-  const [formData, setFormData] = useState({ type: "cat", description: "" });
-
-  const popupRef = useRef();
-
-  useEffect(() => {
-    if (popupRef.current) {
-      popupRef.current._source.openPopup();
-    }
-  }, [newPin]);
-
-  function handleMapClick(latlng) {
-    setNewPin(latlng);
-    setFormData({ type: "cat", description: "" });
-  }
-
-  function handleInputChange(e) {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    if (!newPin) return;
-
-    const newEntry = {
-      lat: newPin.lat,
-      lng: newPin.lng,
-      type: formData.type,
-      description: formData.description,
-    };
-
-    setPins(prev => [...prev, newEntry]);
-    setNewPin(null); // Clear form after submission
-  }
 
   return (
-    <MapContainer
-      center={[43.6532, -79.3832]}
-      zoom={13}
-      style={{ height: "600px", width: "100%" }}
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="&copy; OpenStreetMap contributors"
-      />
+    <div style={{ height: '100vh', width: '100%' }}>
+      <div style={{ padding: '1rem', background: '#f2f2f2' }}>
+        <label>Animal Type: </label>
+        <select onChange={(e) => setSelectedType(e.target.value)} value={selectedType}>
+          <option value="">All</option>
+          <option value="Cat">Cat</option>
+          <option value="Dog">Dog</option>
+          <option value="Other">Other</option>
+        </select>
 
-      <ClickHandler onMapClick={handleMapClick} />
+        <label style={{ marginLeft: '1rem' }}>Color: </label>
+        <select onChange={(e) => setSelectedColor(e.target.value)} value={selectedColor}>
+          <option value="">All</option>
+          <option value="Black">Black</option>
+          <option value="White">White</option>
+          <option value="Brown">Brown</option>
+          <option value="Mixed">Mixed</option>
+        </select>
 
-      {pins.map((pin, index) => (
-        <Marker key={index} position={[pin.lat, pin.lng]}>
-          <Popup>
-            <strong>{pin.type.toUpperCase()}</strong><br />
-            {pin.description}
-          </Popup>
-        </Marker>
-      ))}
+        <label style={{ marginLeft: '1rem' }}>Location: </label>
+        <input
+          type="text"
+          value={locationQuery}
+          onChange={(e) => setLocationQuery(e.target.value)}
+          placeholder="Enter city or area"
+        />
+      </div>
 
-      {newPin && (
-        <Marker position={[newPin.lat, newPin.lng]}>
-          <Popup ref={popupRef}>
-            <form onSubmit={handleSubmit}>
-              <label>
-                Type:<br />
-                <select name="type" value={formData.type} onChange={handleInputChange}>
-                  <option value="cat">Cat</option>
-                  <option value="dog">Dog</option>
-                  <option value="other">Other</option>
-                </select>
-              </label>
-              <br />
-              <label>
-                Description:<br />
-                <input
-                  type="text"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                />
-              </label>
-              <br />
-              <button type="submit">Add Pin</button>
-            </form>
-          </Popup>
-        </Marker>
-      )}
-    </MapContainer>
+      <MapContainer center={[43.7, -79.4]} zoom={12} style={{ height: '90%', width: '100%' }}>
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; OpenStreetMap contributors"
+        />
+        {filteredPins.map(pin => (
+          <Marker key={pin.id} position={[pin.lat, pin.lng]}>
+            <Popup>
+              <strong>{pin.type}</strong><br />
+              Color: {pin.color}<br />
+              Location: {pin.location}<br />
+              {pin.description}
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
   );
-}
+};
+
+export default Map;
+
