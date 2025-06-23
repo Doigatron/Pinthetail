@@ -1,120 +1,98 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const Map = () => {
-  useEffect(() => {
-    const map = L.map('map').setView([43.65, -79.38], 12);
+  const mapRef = useRef(null);
+  const [selectedType, setSelectedType] = useState('all');
+  const [pins, setPins] = useState([]);
 
+  useEffect(() => {
+    const savedPins = JSON.parse(localStorage.getItem('pinthetail_pins')) || [];
+    setPins(savedPins);
+
+    mapRef.current = L.map('map').setView([43.6532, -79.3832], 12); // Toronto by default
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    }).addTo(mapRef.current);
 
-    const getIcon = (type) => {
-      const colors = {
-        cat: 'orange',
-        dog: 'blue',
-        other: 'green',
-      };
-      return L.divIcon({
-        className: 'custom-icon',
-        html: `<div style="
-          background-color: ${colors[type] || 'gray'};
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          border: 2px solid white;
-        "></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
-      });
+    const addPinToMap = (pin) => {
+      const marker = L.marker([pin.lat, pin.lng]).addTo(mapRef.current);
+      marker.bindPopup(`<b>${pin.type}</b><br/>${pin.description || ''}`);
     };
 
-    const savedPins = JSON.parse(localStorage.getItem('pinthetail_pins')) || [];
     savedPins.forEach((pin) => {
-      L.marker(pin.coords, { icon: getIcon(pin.type) })
-        .addTo(map)
-        .bindPopup(`
-          <b>${pin.type}</b><br/>
-          ${pin.color ? `Color: ${pin.color}<br/>` : ''}
-          ${pin.description ? `Description: ${pin.description}<br/>` : ''}
-          ${pin.image ? `<img src="${pin.image}" alt="pet" width="150"/>` : ''}
-        `);
+      if (selectedType === 'all' || pin.type === selectedType) {
+        addPinToMap(pin);
+      }
     });
 
-    map.on('click', (e) => {
-      const coords = e.latlng;
+    const onMapClick = (e) => {
+      const type = prompt('Type of animal? (cat, dog, other)');
+      if (!type || !['cat', 'dog', 'other'].includes(type.toLowerCase())) return;
 
-      const formHtml = `
-        <form id="pinForm">
-          <label>Type:
-            <select name="type">
-              <option value="cat">Cat</option>
-              <option value="dog">Dog</option>
-              <option value="other">Other</option>
-            </select>
-          </label><br/>
-          <label>Color: <input type="text" name="color" /></label><br/>
-          <label>Description: <textarea name="description"></textarea></label><br/>
-          <label>Photo: <input type="file" name="photo" accept="image/*" /></label><br/>
-          <button type="submit">Add Pin</button>
-        </form>
-      `;
+      const description = prompt('Describe the sighting (optional):');
 
-      const popup = L.popup()
-        .setLatLng(coords)
-        .setContent(formHtml)
-        .openOn(map);
+      const newPin = {
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+        type: type.toLowerCase(),
+        description,
+      };
 
-      setTimeout(() => {
-        const form = document.getElementById('pinForm');
-        if (form) {
-          form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const type = formData.get('type');
-            const color = formData.get('color');
-            const description = formData.get('description');
-            const photoFile = formData.get('photo');
-            const reader = new FileReader();
+      const updatedPins = [...pins, newPin];
+      localStorage.setItem('pinthetail_pins', JSON.stringify(updatedPins));
+      setPins(updatedPins);
 
-            reader.onload = () => {
-              const newPin = {
-                coords,
-                type,
-                color,
-                description,
-                image: reader.result,
-              };
+      const marker = L.marker([newPin.lat, newPin.lng]).addTo(mapRef.current);
+      marker.bindPopup(`<b>${newPin.type}</b><br/>${newPin.description || ''}`).openPopup();
+    };
 
-              savedPins.push(newPin);
-              localStorage.setItem('pinthetail_pins', JSON.stringify(savedPins));
+    mapRef.current.on('click', onMapClick);
 
-              L.marker(coords, { icon: getIcon(type) })
-                .addTo(map)
-                .bindPopup(`
-                  <b>${type}</b><br/>
-                  ${color ? `Color: ${color}<br/>` : ''}
-                  ${description ? `Description: ${description}<br/>` : ''}
-                  ${newPin.image ? `<img src="${newPin.image}" alt="pet" width="150"/>` : ''}
-                `)
-                .openPopup();
+    return () => {
+      mapRef.current.off();
+      mapRef.current.remove();
+    };
+  }, [selectedType]);
 
-              map.closePopup();
-            };
+  return (
+    <>
+      <div style={{ margin: '1rem' }}>
+        <label htmlFor="filter">Filter pins: </label>
+        <select
+          id="filter"
+          value={selectedType}
+          onChange={(e) => setSelectedType(e.target.value)}
+        >
+          <option value="all">All</option>
+          <option value="cat">Cat</option>
+          <option value="dog">Dog</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
 
-            if (photoFile) {
-              reader.readAsDataURL(photoFile);
-            } else {
-              reader.onload();
-            }
-          });
-        }
-      }, 100);
-    });
-  }, []);
+      <div id="map" style={{ height: '80vh', width: '100%' }}></div>
 
-  return <div id="map" style={{ height: '80vh', width: '100%' }}></div>;
+      <button
+        onClick={() => {
+          localStorage.removeItem('pinthetail_pins');
+          window.location.reload();
+        }}
+        style={{
+          margin: '1rem',
+          padding: '0.5rem 1rem',
+          background: '#f4694c',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+        }}
+      >
+        Clear All Pins
+      </button>
+    </>
+  );
 };
 
 export default Map;
