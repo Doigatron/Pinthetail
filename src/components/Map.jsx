@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 
 const Map = () => {
   useEffect(() => {
-    const map = L.map('map').setView([43.65, -79.38], 12); // Toronto area
+    const map = L.map('map').setView([43.65, -79.38], 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
@@ -16,7 +16,6 @@ const Map = () => {
         dog: 'blue',
         other: 'green',
       };
-
       return L.divIcon({
         className: 'custom-icon',
         html: `<div style="
@@ -30,6 +29,18 @@ const Map = () => {
         iconAnchor: [8, 8],
       });
     };
+
+    const savedPins = JSON.parse(localStorage.getItem('pinthetail_pins')) || [];
+    savedPins.forEach((pin) => {
+      L.marker(pin.coords, { icon: getIcon(pin.type) })
+        .addTo(map)
+        .bindPopup(`
+          <b>${pin.type}</b><br/>
+          ${pin.color ? `Color: ${pin.color}<br/>` : ''}
+          ${pin.description ? `Description: ${pin.description}<br/>` : ''}
+          ${pin.image ? `<img src="${pin.image}" alt="pet" width="150"/>` : ''}
+        `);
+    });
 
     map.on('click', (e) => {
       const coords = e.latlng;
@@ -65,28 +76,45 @@ const Map = () => {
             const color = formData.get('color');
             const description = formData.get('description');
             const photoFile = formData.get('photo');
-            const photoUrl = photoFile ? URL.createObjectURL(photoFile) : '';
+            const reader = new FileReader();
 
-            L.marker(coords, { icon: getIcon(type) })
-              .addTo(map)
-              .bindPopup(`
-                <b>${type}</b><br/>
-                ${color ? `Color: ${color}<br/>` : ''}
-                ${description ? `Description: ${description}<br/>` : ''}
-                ${photoUrl ? `<img src="${photoUrl}" alt="pet photo" width="150"/>` : ''}
-              `)
-              .openPopup();
+            reader.onload = () => {
+              const newPin = {
+                coords,
+                type,
+                color,
+                description,
+                image: reader.result,
+              };
 
-            map.closePopup();
+              savedPins.push(newPin);
+              localStorage.setItem('pinthetail_pins', JSON.stringify(savedPins));
+
+              L.marker(coords, { icon: getIcon(type) })
+                .addTo(map)
+                .bindPopup(`
+                  <b>${type}</b><br/>
+                  ${color ? `Color: ${color}<br/>` : ''}
+                  ${description ? `Description: ${description}<br/>` : ''}
+                  ${newPin.image ? `<img src="${newPin.image}" alt="pet" width="150"/>` : ''}
+                `)
+                .openPopup();
+
+              map.closePopup();
+            };
+
+            if (photoFile) {
+              reader.readAsDataURL(photoFile);
+            } else {
+              reader.onload();
+            }
           });
         }
       }, 100);
     });
   }, []);
 
-  return (
-    <div id="map" style={{ height: '80vh', width: '100%' }}></div>
-  );
+  return <div id="map" style={{ height: '80vh', width: '100%' }}></div>;
 };
 
 export default Map;
