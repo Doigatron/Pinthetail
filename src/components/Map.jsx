@@ -33,13 +33,18 @@ const Map = () => {
       }
     });
 
-    const onMapClick = (e) => {
+    const onMapClick = async (e) => {
       const type = prompt('Type of animal? (cat, dog, other)');
       if (!type || !['cat', 'dog', 'other'].includes(type.toLowerCase())) return;
 
       const label = prompt('Enter nearest street/city name (optional):');
       const description = prompt('Describe the sighting (optional):');
       const image = prompt('Paste image URL (optional):');
+
+      if (image) {
+        const confirmPreview = window.confirm(`Preview image?\n${image}`);
+        if (!confirmPreview) return;
+      }
 
       const newPin = {
         lat: e.latlng.lat,
