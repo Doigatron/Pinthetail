@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import {
+  MapContainer, TileLayer, Marker, Popup, useMapEvents
+} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const samplePins = [
@@ -8,17 +10,31 @@ const samplePins = [
   { id: 3, lat: 43.68, lng: -79.42, type: 'Other', color: 'White', location: 'Toronto', description: 'White bunny spotted downtown.' },
 ];
 
+const MapClickHandler = ({ onMapClick }) => {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng);
+    },
+  });
+  return null;
+};
+
 const Map = () => {
-  const getInitialFilter = (key) => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(key) || '';
-  };
+  const getInitialFilter = (key) => new URLSearchParams(window.location.search).get(key) || '';
 
   const [selectedType, setSelectedType] = useState(getInitialFilter('type'));
   const [selectedColor, setSelectedColor] = useState(getInitialFilter('color'));
   const [locationQuery, setLocationQuery] = useState(getInitialFilter('location'));
 
-  // Update URL when filters change
+  const [pins, setPins] = useState(samplePins);
+  const [newPinPosition, setNewPinPosition] = useState(null);
+  const [formData, setFormData] = useState({
+    type: 'Cat',
+    color: 'Black',
+    location: '',
+    description: ''
+  });
+
   useEffect(() => {
     const params = new URLSearchParams();
     if (selectedType) params.set('type', selectedType);
@@ -27,7 +43,7 @@ const Map = () => {
     window.history.replaceState(null, '', `?${params.toString()}`);
   }, [selectedType, selectedColor, locationQuery]);
 
-  const filteredPins = samplePins.filter(pin => {
+  const filteredPins = pins.filter(pin => {
     const matchType = selectedType ? pin.type === selectedType : true;
     const matchColor = selectedColor ? pin.color === selectedColor : true;
     const matchLocation = locationQuery
@@ -35,6 +51,19 @@ const Map = () => {
       : true;
     return matchType && matchColor && matchLocation;
   });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newPin = {
+      id: Date.now(),
+      lat: newPinPosition.lat,
+      lng: newPinPosition.lng,
+      ...formData
+    };
+    setPins([...pins, newPin]);
+    setNewPinPosition(null);
+    setFormData({ type: 'Cat', color: 'Black', location: '', description: '' });
+  };
 
   const clearFilters = () => {
     setSelectedType('');
@@ -78,6 +107,8 @@ const Map = () => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"
         />
+        <MapClickHandler onMapClick={(latlng) => setNewPinPosition(latlng)} />
+
         {filteredPins.map(pin => (
           <Marker key={pin.id} position={[pin.lat, pin.lng]}>
             <Popup>
@@ -88,6 +119,46 @@ const Map = () => {
             </Popup>
           </Marker>
         ))}
+
+        {newPinPosition && (
+          <Marker position={newPinPosition}>
+            <Popup>
+              <form onSubmit={handleSubmit}>
+                <label>Type:
+                  <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
+                    <option value="Cat">Cat</option>
+                    <option value="Dog">Dog</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label><br />
+                <label>Color:
+                  <select value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })}>
+                    <option value="Black">Black</option>
+                    <option value="White">White</option>
+                    <option value="Brown">Brown</option>
+                    <option value="Mixed">Mixed</option>
+                  </select>
+                </label><br />
+                <label>Location:
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    required
+                  />
+                </label><br />
+                <label>Description:
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    required
+                  />
+                </label><br />
+                <button type="submit">Add Pin</button>
+              </form>
+            </Popup>
+          </Marker>
+        )}
       </MapContainer>
     </div>
   );
