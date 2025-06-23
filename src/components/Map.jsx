@@ -20,6 +20,7 @@ const Map = () => {
       const marker = L.marker([pin.lat, pin.lng]).addTo(mapRef.current);
       const popupContent = `
         <b>${pin.type}</b><br/>
+        ${pin.label ? `<b>📍 ${pin.label}</b><br/>` : ''}
         ${pin.description || ''}
         ${pin.image ? `<br/><img src="${pin.image}" alt="pin image" style="max-width:150px; max-height:150px;"/>` : ''}
       `;
@@ -36,6 +37,7 @@ const Map = () => {
       const type = prompt('Type of animal? (cat, dog, other)');
       if (!type || !['cat', 'dog', 'other'].includes(type.toLowerCase())) return;
 
+      const label = prompt('Enter nearest street/city name (optional):');
       const description = prompt('Describe the sighting (optional):');
       const image = prompt('Paste image URL (optional):');
 
@@ -43,6 +45,7 @@ const Map = () => {
         lat: e.latlng.lat,
         lng: e.latlng.lng,
         type: type.toLowerCase(),
+        label,
         description,
         image,
       };
@@ -54,6 +57,7 @@ const Map = () => {
       const marker = L.marker([newPin.lat, newPin.lng]).addTo(mapRef.current);
       const popupContent = `
         <b>${newPin.type}</b><br/>
+        ${newPin.label ? `<b>📍 ${newPin.label}</b><br/>` : ''}
         ${newPin.description || ''}
         ${newPin.image ? `<br/><img src="${newPin.image}" alt="pin image" style="max-width:150px; max-height:150px;"/>` : ''}
       `;
