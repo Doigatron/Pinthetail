@@ -11,14 +11,19 @@ const Map = () => {
     const savedPins = JSON.parse(localStorage.getItem('pinthetail_pins')) || [];
     setPins(savedPins);
 
-    mapRef.current = L.map('map').setView([43.6532, -79.3832], 12); // Toronto by default
+    mapRef.current = L.map('map').setView([43.6532, -79.3832], 12); // Toronto
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(mapRef.current);
 
     const addPinToMap = (pin) => {
       const marker = L.marker([pin.lat, pin.lng]).addTo(mapRef.current);
-      marker.bindPopup(`<b>${pin.type}</b><br/>${pin.description || ''}`);
+      const popupContent = `
+        <b>${pin.type}</b><br/>
+        ${pin.description || ''}
+        ${pin.image ? `<br/><img src="${pin.image}" alt="pin image" style="max-width:150px; max-height:150px;"/>` : ''}
+      `;
+      marker.bindPopup(popupContent);
     };
 
     savedPins.forEach((pin) => {
@@ -32,12 +37,14 @@ const Map = () => {
       if (!type || !['cat', 'dog', 'other'].includes(type.toLowerCase())) return;
 
       const description = prompt('Describe the sighting (optional):');
+      const image = prompt('Paste image URL (optional):');
 
       const newPin = {
         lat: e.latlng.lat,
         lng: e.latlng.lng,
         type: type.toLowerCase(),
         description,
+        image,
       };
 
       const updatedPins = [...pins, newPin];
@@ -45,7 +52,12 @@ const Map = () => {
       setPins(updatedPins);
 
       const marker = L.marker([newPin.lat, newPin.lng]).addTo(mapRef.current);
-      marker.bindPopup(`<b>${newPin.type}</b><br/>${newPin.description || ''}`).openPopup();
+      const popupContent = `
+        <b>${newPin.type}</b><br/>
+        ${newPin.description || ''}
+        ${newPin.image ? `<br/><img src="${newPin.image}" alt="pin image" style="max-width:150px; max-height:150px;"/>` : ''}
+      `;
+      marker.bindPopup(popupContent).openPopup();
     };
 
     mapRef.current.on('click', onMapClick);
