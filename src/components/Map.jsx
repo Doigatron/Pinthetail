@@ -1,101 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import React, { useEffect } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-function Map() {
-  const [pins, setPins] = useState([]);
-  const [newPin, setNewPin] = useState(null);
-  const [formData, setFormData] = useState({ animal: 'cat', notes: '', image: '' });
-
-  // Load pins from localStorage on start
+const Map = () => {
   useEffect(() => {
-    const saved = localStorage.getItem('pins');
-    if (saved) setPins(JSON.parse(saved));
+    const map = L.map('map').setView([43.65, -79.38], 12); // Toronto area
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+
+    const getIcon = (type) => {
+      const colors = {
+        cat: 'orange',
+        dog: 'blue',
+        other: 'green',
+      };
+
+      return L.divIcon({
+        className: 'custom-icon',
+        html: `<div style="
+          background-color: ${colors[type] || 'gray'};
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          border: 2px solid white;
+        "></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      });
+    };
+
+    map.on('click', (e) => {
+      const coords = e.latlng;
+
+      const formHtml = `
+        <form id="pinForm">
+          <label>Type:
+            <select name="type">
+              <option value="cat">Cat</option>
+              <option value="dog">Dog</option>
+              <option value="other">Other</option>
+            </select>
+          </label><br/>
+          <label>Color: <input type="text" name="color" /></label><br/>
+          <label>Description: <textarea name="description"></textarea></label><br/>
+          <label>Photo: <input type="file" name="photo" accept="image/*" /></label><br/>
+          <button type="submit">Add Pin</button>
+        </form>
+      `;
+
+      const popup = L.popup()
+        .setLatLng(coords)
+        .setContent(formHtml)
+        .openOn(map);
+
+      setTimeout(() => {
+        const form = document.getElementById('pinForm');
+        if (form) {
+          form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const type = formData.get('type');
+            const color = formData.get('color');
+            const description = formData.get('description');
+            const photoFile = formData.get('photo');
+            const photoUrl = photoFile ? URL.createObjectURL(photoFile) : '';
+
+            L.marker(coords, { icon: getIcon(type) })
+              .addTo(map)
+              .bindPopup(`
+                <b>${type}</b><br/>
+                ${color ? `Color: ${color}<br/>` : ''}
+                ${description ? `Description: ${description}<br/>` : ''}
+                ${photoUrl ? `<img src="${photoUrl}" alt="pet photo" width="150"/>` : ''}
+              `)
+              .openPopup();
+
+            map.closePopup();
+          });
+        }
+      }, 100);
+    });
   }, []);
 
-  // Save pins to localStorage
-  useEffect(() => {
-    localStorage.setItem('pins', JSON.stringify(pins));
-  }, [pins]);
-
-  const MapClickHandler = () => {
-    useMapEvents({
-      click(e) {
-        setNewPin(e.latlng);
-        setFormData({ animal: 'cat', notes: '', image: '' });
-      }
-    });
-    return null;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setPins([...pins, { ...formData, position: newPin }]);
-    setNewPin(null);
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData({ ...formData, image: reader.result });
-    };
-    if (file) reader.readAsDataURL(file);
-  };
-
   return (
-    <MapContainer center={[43.7, -79.4]} zoom={11} style={{ height: '80vh', width: '100%' }}>
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <MapClickHandler />
-
-      {pins.map((pin, idx) => (
-        <Marker key={idx} position={pin.position}>
-          <Popup>
-            <strong>{pin.animal.toUpperCase()}</strong><br />
-            {pin.notes}<br />
-            {pin.image && <img src={pin.image} alt="Pet" style={{ width: '100%', marginTop: '8px' }} />}
-          </Popup>
-        </Marker>
-      ))}
-
-      {newPin && (
-        <Marker position={newPin}>
-          <Popup>
-            <form onSubmit={handleSubmit}>
-              <label>Animal:
-                <select value={formData.animal} onChange={e => setFormData({ ...formData, animal: e.target.value })}>
-                  <option value="cat">Cat</option>
-                  <option value="dog">Dog</option>
-                  <option value="other">Other</option>
-                </select>
-              </label><br />
-              <label>Notes:
-                <input
-                  type="text"
-                  value={formData.notes}
-                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </label><br />
-              <label>Photo:
-                <input type="file" accept="image/*" onChange={handleImageChange} />
-              </label><br />
-              <button type="submit">Add Pin</button>
-            </form>
-          </Popup>
-        </Marker>
-      )}
-    </MapContainer>
+    <div id="map" style={{ height: '80vh', width: '100%' }}></div>
   );
-}
+};
 
 export default Map;
